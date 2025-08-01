@@ -386,41 +386,102 @@
         let isRecording = false;
         let alertActive = false;
         let animationFrame;
+        let stream;
 
         async function startMeasurement() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
+                // ブラウザのマイクアクセス許可を取得
+                console.log('マイクアクセスを要求中...');
+                document.getElementById('status').textContent = 'マイクアクセスを要求中...';
+                
+                stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: false,
                         noiseSuppression: false,
-                        autoGainControl: false
+                        autoGainControl: false,
+                        sampleRate: 44100
                     } 
                 });
                 
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('マイクアクセス許可取得');
+                document.getElementById('status').textContent = '音声コンテキストを設定中...';
+                
+                // AudioContextを作成
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 44100
+                });
+                
+                // ユーザーのインタラクションでAudioContextを再開
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                console.log('AudioContext作成完了:', audioContext.state);
+                
                 analyser = audioContext.createAnalyser();
                 microphone = audioContext.createMediaStreamSource(stream);
                 
-                analyser.fftSize = 512;
-                analyser.smoothingTimeConstant = 0.3;
+                analyser.fftSize = 1024;
+                analyser.smoothingTimeConstant = 0.8;
+                analyser.minDecibels = -90;
+                analyser.maxDecibels = -10;
+                
                 const bufferLength = analyser.frequencyBinCount;
                 dataArray = new Uint8Array(bufferLength);
                 
                 microphone.connect(analyser);
+                console.log('マイク接続完了');
                 
                 isRecording = true;
                 document.getElementById('startBtn').disabled = true;
                 document.getElementById('stopBtn').disabled = false;
+                document.getElementById('status').textContent = '測定中... 😊';
                 
+                // テスト測定を実行
+                testMicrophone();
                 measureVolume();
                 
             } catch (error) {
-                alert('マイクへのアクセスが拒否されました。\nブラウザの設定でマイクアクセスを許可してください。');
-                console.error('Error accessing microphone:', error);
+                console.error('マイクアクセスエラー:', error);
+                let errorMessage = 'マイクへのアクセスが拒否されました。\n\n';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += '1. ブラウザのアドレスバー左側の🔒またはカメラアイコンをクリック\n';
+                    errorMessage += '2. マイクの許可を「許可」に変更\n';
+                    errorMessage += '3. ページを再読み込みして再試行';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += '利用可能なマイクが見つかりません。\nマイクが接続されているか確認してください。';
+                } else {
+                    errorMessage += 'エラー: ' + error.message;
+                }
+                
+                alert(errorMessage);
+                document.getElementById('status').textContent = 'エラー: マイクアクセスが拒否されました';
+                
+                // ボタンを再有効化
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
             }
         }
 
+        function testMicrophone() {
+            // マイクが正常に動作しているかテスト
+            setTimeout(() => {
+                if (isRecording && analyser && dataArray) {
+                    analyser.getByteFrequencyData(dataArray);
+                    const sum = dataArray.reduce((a, b) => a + b, 0);
+                    console.log('マイクテスト - データ合計:', sum);
+                    
+                    if (sum === 0) {
+                        console.warn('マイクからデータが取得できていません');
+                        document.getElementById('status').textContent = '⚠️ マイクが検出されません';
+                    }
+                }
+            }, 1000);
+        }
+
         function stopMeasurement() {
+            console.log('測定停止中...');
             isRecording = false;
             
             if (animationFrame) {
@@ -430,6 +491,11 @@
             if (microphone) {
                 microphone.disconnect();
             }
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close();
             }
@@ -443,61 +509,79 @@
             document.getElementById('status').className = 'status';
             
             hideAlert();
+            console.log('測定停止完了');
         }
 
         function measureVolume() {
-            if (!isRecording) return;
+            if (!isRecording || !analyser || !dataArray) return;
             
-            analyser.getByteFrequencyData(dataArray);
-            
-            // より正確な音量計算
-            let sum = 0;
-            let count = 0;
-            
-            // 人の声の範囲 (300Hz-3400Hz) を重視
-            const sampleRate = audioContext.sampleRate;
-            const binSize = sampleRate / analyser.fftSize;
-            
-            for (let i = 0; i < dataArray.length; i++) {
-                const freq = i * binSize;
-                if (freq >= 100 && freq <= 4000) { // 人の声とざわめきの範囲
-                    sum += dataArray[i] * dataArray[i];
-                    count++;
+            try {
+                analyser.getByteFrequencyData(dataArray);
+                
+                // シンプルで確実な音量計算
+                let sum = 0;
+                let maxValue = 0;
+                
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                    maxValue = Math.max(maxValue, dataArray[i]);
                 }
-            }
-            
-            if (count === 0) count = 1;
-            
-            const rms = Math.sqrt(sum / count);
-            const db = Math.max(0, 20 * Math.log10(rms / 255) + 94);
-            
-            // 表示用のdB値を調整（より直感的な値に）
-            const displayDb = Math.max(30, Math.min(100, db + 20));
-            
-            document.getElementById('volumeLevel').textContent = Math.round(displayDb);
-            
-            // 針の角度計算（-90度から+90度まで180度回転）
-            const minDb = 30;
-            const maxDb = 100;
-            const normalizedDb = Math.max(0, Math.min(1, (displayDb - minDb) / (maxDb - minDb)));
-            const rotation = -90 + (normalizedDb * 180);
-            document.getElementById('needle').style.transform = `translate(-50%, -100%) rotate(${rotation}deg)`;
-            
-            const threshold = parseInt(document.getElementById('threshold').value) || 75;
-            const statusElement = document.getElementById('status');
-            
-            if (displayDb < threshold * 0.8) {
-                statusElement.textContent = '静かです 😊';
-                statusElement.className = 'status quiet';
-                hideAlert();
-            } else if (displayDb < threshold) {
-                statusElement.textContent = '少し騒がしいです 😐';
-                statusElement.className = 'status normal';
-                hideAlert();
-            } else {
-                statusElement.textContent = 'うるさいです！ 😱';
-                statusElement.className = 'status loud';
-                showAlert();
+                
+                const average = sum / dataArray.length;
+                
+                // デバッグ情報をログ出力
+                if (Math.random() < 0.01) { // 1%の確率でログ出力
+                    console.log('音量データ - 平均:', average, '最大:', maxValue, '合計:', sum);
+                }
+                
+                // より敏感な音量計算
+                let displayDb;
+                if (maxValue > 0) {
+                    // 最大値ベースの計算でより敏感に
+                    const normalizedMax = maxValue / 255;
+                    displayDb = Math.max(35, 35 + (normalizedMax * 50));
+                    
+                    // 平均値も考慮
+                    const normalizedAvg = average / 255;
+                    const avgDb = 35 + (normalizedAvg * 65);
+                    
+                    // 最大値と平均値の重み付き平均
+                    displayDb = (displayDb * 0.7) + (avgDb * 0.3);
+                } else {
+                    displayDb = 35;
+                }
+                
+                // 表示範囲を35-90dBに制限
+                displayDb = Math.max(35, Math.min(90, displayDb));
+                
+                document.getElementById('volumeLevel').textContent = Math.round(displayDb);
+                
+                // 針の角度計算（-90度から+90度まで180度回転）
+                const minDb = 35;
+                const maxDb = 90;
+                const normalizedDb = Math.max(0, Math.min(1, (displayDb - minDb) / (maxDb - minDb)));
+                const rotation = -90 + (normalizedDb * 180);
+                document.getElementById('needle').style.transform = `translate(-50%, -100%) rotate(${rotation}deg)`;
+                
+                const threshold = parseInt(document.getElementById('threshold').value) || 75;
+                const statusElement = document.getElementById('status');
+                
+                if (displayDb < threshold * 0.8) {
+                    statusElement.textContent = '静かです 😊';
+                    statusElement.className = 'status quiet';
+                    hideAlert();
+                } else if (displayDb < threshold) {
+                    statusElement.textContent = '少し騒がしいです 😐';
+                    statusElement.className = 'status normal';
+                    hideAlert();
+                } else {
+                    statusElement.textContent = 'うるさいです！ 😱';
+                    statusElement.className = 'status loud';
+                    showAlert();
+                }
+                
+            } catch (error) {
+                console.error('音量測定エラー:', error);
             }
             
             animationFrame = requestAnimationFrame(measureVolume);
