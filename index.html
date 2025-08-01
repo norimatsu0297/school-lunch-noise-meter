@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>給食時間騒音計 - School Lunch Noise Meter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1em;
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+
+        .meter-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 30px auto;
+        }
+
+        .meter-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #22c55e 0deg 120deg,
+                #eab308 120deg 240deg,
+                #ef4444 240deg 360deg
+            );
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
+            to { box-shadow: 0 15px 40px rgba(255, 255, 255, 0.1); }
+        }
+
+        .meter-inner {
+            width: 80%;
+            height: 80%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            font-weight: bold;
+            box-shadow: inset 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .volume-level {
+            font-size: 3.5em;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+            font-weight: 900;
+        }
+
+        .volume-text {
+            font-size: 1.3em;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 110px;
+            background: linear-gradient(to top, #333 0%, #666 100%);
+            border-radius: 2px;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(-90deg);
+            transition: transform 0.2s ease-out;
+            z-index: 10;
+        }
+
+        .needle::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls {
+            margin: 30px 0;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            min-width: 120px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            background: linear-gradient(45deg, #888, #666);
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.7;
+        }
+
+        .btn.stop {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+        }
+
+        .status {
+            margin: 25px 0;
+            font-size: 1.4em;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .status.quiet {
+            color: #22c55e;
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .status.normal {
+            color: #eab308;
+            border-color: #eab308;
+            background: rgba(234, 179, 8, 0.1);
+        }
+
+        .status.loud {
+            color: #ef4444;
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.2);
+            animation: statusPulse 1s infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        .alert {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(239, 68, 68, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: alertFlash 0.8s infinite alternate;
+        }
+
+        .alert.show {
+            display: flex;
+        }
+
+        .alert-content {
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes alertFlash {
+            0% { background: rgba(239, 68, 68, 0.95); }
+            100% { background: rgba(239, 68, 68, 0.7); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .threshold-setting {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .threshold-setting label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .threshold-input {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .threshold-setting input {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            color: white;
+            font-size: 1.1em;
+            font-weight: 600;
+            width: 100px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .threshold-setting input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .threshold-setting input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .threshold-unit {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .info-text {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 20px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .meter-container {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .volume-level {
+                font-size: 3em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                min-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ 給食時間騒音計</h1>
+            <div class="subtitle">School Lunch Noise Meter</div>
+        </div>
+        
+        <div class="meter-container">
+            <div class="meter-circle">
+                <div class="meter-inner">
+                    <div class="volume-level" id="volumeLevel">0</div>
+                    <div class="volume-text">dB</div>
+                </div>
+                <div class="needle" id="needle"></div>
+            </div>
+        </div>
+
+        <div class="status quiet" id="status">静かです 😊</div>
+
+        <div class="threshold-setting">
+            <label for="threshold">🔊 アラート音量レベル</label>
+            <div class="threshold-input">
+                <input type="number" id="threshold" value="75" min="50" max="100" placeholder="75">
+                <span class="threshold-unit">dB</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="startBtn" onclick="startMeasurement()">📢 測定開始</button>
+            <button class="btn stop" id="stopBtn" onclick="stopMeasurement()" disabled>⏹️ 測定停止</button>
+        </div>
+
+        <div class="info-text">
+            マイクへのアクセスを許可してから「測定開始」をクリックしてください。<br>
+            音量が設定レベルを超えるとアラートが表示されます。
+        </div>
+    </div>
+
+    <div class="alert" id="alert">
+        <div class="alert-content">
+            🔊 静かにしましょう！ 🔊<br>
+            <div style="font-size: 0.6em; margin-top: 20px;">音量が大きすぎます</div>
+        </div>
+    </div>
+
+    <script>
+        let audioContext;
+        let analyser;
+        let microphone;
+        let dataArray;
+        let isRecording = false;
+        let alertActive = false;
+        let animationFrame;
+
+        async function startMeasurement() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    } 
+                });
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.3;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                
+                microphone.connect(analyser);
+                
+                isRecording = true;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                
+                measureVolume();
+                
+            } catch (error) {
+                alert('マイクへのアクセスが拒否されました。\nブラウザの設定でマイクアクセスを許可してください。');
+                console.error('Error accessing microphone:', error);
+            }
+        }
+
+        function stopMeasurement() {
+            isRecording = false;
+            
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            
+            if (microphone) {
+                microphone.disconnect();
+            }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close();
+            }
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            document.getElementById('volumeLevel').textContent = '0';
+            document.getElementById('needle').style.transform = 'translate(-50%, -100%) rotate(-90deg)';
+            document.getElementById('status').textContent = '測定停止中';
+            document.getElementById('status').className = 'status';
+            
+            hideAlert();
+        }
+
+        function measureVolume() {
+            if (!isRecording) return;
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            // より正確な音量計算
+            let sum = 0;
+            let count = 0;
+            
+            // 人の声の範囲 (300Hz-3400Hz) を重視
+            const sampleRate = audioContext.sampleRate;
+            const binSize = sampleRate / analyser.fftSize;
+            
+            for (let i = 0; i < dataArray.length; i++) {
+                const freq = i * binSize;
+                if (freq >= 100 && freq <= 4000) { // 人の声とざわめきの範囲
+                    sum += dataArray[i] * dataArray[i];
+                    count++;
+                }
+            }
+            
+            if (count === 0) count = 1;
+            
+            const rms = Math.sqrt(sum / count);
+            const db = Math.max(0, 20 * Math.log10(rms / 255) + 94);
+            
+            // 表示用のdB値を調整（より直感的な値に）
+            const displayDb = Math.max(30, Math.min(100, db + 20));
+            
+            document.getElementById('volumeLevel').textContent = Math.round(displayDb);
+            
+            // 針の角度計算（-90度から+90度まで180度回転）
+            const minDb = 30;
+            const maxDb = 100;
+            const normalizedDb = Math.max(0, Math.min(1, (displayDb - minDb) / (maxDb - minDb)));
+            const rotation = -90 + (normalizedDb * 180);
+            document.getElementById('needle').style.transform = `translate(-50%, -100%) rotate(${rotation}deg)`;
+            
+            const threshold = parseInt(document.getElementById('threshold').value) || 75;
+            const statusElement = document.getElementById('status');
+            
+            if (displayDb < threshold * 0.8) {
+                statusElement.textContent = '静かです 😊';
+                statusElement.className = 'status quiet';
+                hideAlert();
+            } else if (displayDb < threshold) {
+                statusElement.textContent = '少し騒がしいです 😐';
+                statusElement.className = 'status normal';
+                hideAlert();
+            } else {
+                statusElement.textContent = 'うるさいです！ 😱';
+                statusElement.className = 'status loud';
+                showAlert();
+            }
+            
+            animationFrame = requestAnimationFrame(measureVolume);
+        }
+
+        function showAlert() {
+            if (!alertActive) {
+                alertActive = true;
+                document.getElementById('alert').classList.add('show');
+                
+                // ブザー音を生成
+                if (audioContext && audioContext.state === 'running') {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                    oscillator.frequency.setValueAtTime(1760, audioContext.currentTime + 0.1);
+                    oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.2);
+                    
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                }
+                
+                // 3秒後にアラートを自動で隠す
+                setTimeout(() => {
+                    if (alertActive) {
+                        hideAlert();
+                    }
+                }, 3000);
+            }
+        }
+
+        function hideAlert() {
+            if (alertActive) {
+                alertActive = false;
+                document.getElementById('alert').classList.remove('show');
+            }
+        }
+
+        // 閾値入力の検証
+        document.getElementById('threshold').addEventListener('input', function() {
+            let value = parseInt(this.value);
+            if (isNaN(value) || value < 50) {
+                this.value = 50;
+            } else if (value > 100) {
+                this.value = 100;
+            }
+        });
+
+        // ページ離脱時に測定を停止
+        window.addEventListener('beforeunload', function() {
+            if (isRecording) {
+                stopMeasurement();
+            }
+        });
+
+        // エラーハンドリング
+        window.addEventListener('error', function(event) {
+            console.error('アプリケーションエラー:', event.error);
+        });
+    </script>
+</body>
+</html>
