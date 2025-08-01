@@ -19,43 +19,47 @@
             justify-content: center;
             align-items: center;
             color: white;
-            overflow: hidden;
+            overflow-x: hidden;
+            padding: 10px;
+            box-sizing: border-box;
         }
 
         .container {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 40px;
+            padding: 20px;
             text-align: center;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 600px;
-            width: 90%;
+            max-width: 500px;
+            width: 100%;
             position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .header {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         h1 {
-            font-size: 2.2em;
-            margin-bottom: 10px;
+            font-size: 1.8em;
+            margin-bottom: 8px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .subtitle {
-            font-size: 1em;
+            font-size: 0.9em;
             opacity: 0.8;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .meter-container {
             position: relative;
-            width: 280px;
-            height: 280px;
-            margin: 30px auto;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
         }
 
         .meter-circle {
@@ -96,14 +100,14 @@
         }
 
         .volume-level {
-            font-size: 3.5em;
-            margin-bottom: 8px;
+            font-size: 2.5em;
+            margin-bottom: 5px;
             transition: all 0.2s ease;
             font-weight: 900;
         }
 
         .volume-text {
-            font-size: 1.3em;
+            font-size: 1em;
             color: #666;
             font-weight: 600;
         }
@@ -112,8 +116,8 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 4px;
-            height: 110px;
+            width: 3px;
+            height: 80px;
             background: linear-gradient(to top, #333 0%, #666 100%);
             border-radius: 2px;
             transform-origin: bottom center;
@@ -125,20 +129,20 @@
         .needle::after {
             content: '';
             position: absolute;
-            bottom: -8px;
+            bottom: -6px;
             left: 50%;
             transform: translateX(-50%);
-            width: 16px;
-            height: 16px;
+            width: 12px;
+            height: 12px;
             background: #333;
             border-radius: 50%;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .controls {
-            margin: 30px 0;
+            margin: 20px 0;
             display: flex;
-            gap: 15px;
+            gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
         }
@@ -147,14 +151,14 @@
             background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
             border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            font-size: 1em;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            min-width: 120px;
+            min-width: 100px;
         }
 
         .btn:hover {
@@ -174,11 +178,11 @@
         }
 
         .status {
-            margin: 25px 0;
-            font-size: 1.4em;
+            margin: 15px 0;
+            font-size: 1.2em;
             font-weight: bold;
-            padding: 15px;
-            border-radius: 15px;
+            padding: 10px;
+            border-radius: 12px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid transparent;
             transition: all 0.3s ease;
@@ -246,17 +250,17 @@
         }
 
         .threshold-setting {
-            margin: 25px 0;
-            padding: 20px;
+            margin: 15px 0;
+            padding: 15px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .threshold-setting label {
             display: block;
-            margin-bottom: 12px;
-            font-size: 1.1em;
+            margin-bottom: 8px;
+            font-size: 1em;
             font-weight: 600;
         }
 
@@ -270,12 +274,12 @@
         .threshold-setting input {
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: 8px;
+            padding: 8px;
             color: white;
-            font-size: 1.1em;
+            font-size: 1em;
             font-weight: 600;
-            width: 100px;
+            width: 80px;
             text-align: center;
             transition: all 0.3s ease;
         }
@@ -291,44 +295,115 @@
         }
 
         .threshold-unit {
-            font-size: 1.2em;
+            font-size: 1em;
             font-weight: 600;
             color: rgba(255, 255, 255, 0.9);
         }
 
         .info-text {
-            font-size: 0.9em;
+            font-size: 0.8em;
             opacity: 0.8;
-            margin-top: 20px;
-            line-height: 1.4;
+            margin-top: 15px;
+            line-height: 1.3;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
             .container {
-                padding: 30px 20px;
-                margin: 20px;
+                padding: 15px;
+                margin: 5px;
+                max-width: 95%;
             }
             
             h1 {
-                font-size: 1.8em;
+                font-size: 1.5em;
+            }
+            
+            .subtitle {
+                font-size: 0.8em;
             }
             
             .meter-container {
-                width: 250px;
-                height: 250px;
+                width: 160px;
+                height: 160px;
+                margin: 15px auto;
             }
             
             .volume-level {
-                font-size: 3em;
+                font-size: 2em;
+            }
+            
+            .volume-text {
+                font-size: 0.9em;
+            }
+            
+            .needle {
+                height: 60px;
+                width: 2px;
+            }
+            
+            .needle::after {
+                width: 8px;
+                height: 8px;
+                bottom: -4px;
             }
             
             .controls {
                 flex-direction: column;
                 align-items: center;
+                gap: 8px;
+                margin: 15px 0;
             }
             
             .btn {
-                min-width: 200px;
+                min-width: 140px;
+                padding: 8px 16px;
+                font-size: 0.85em;
+            }
+            
+            .status {
+                font-size: 1em;
+                margin: 10px 0;
+                padding: 8px;
+            }
+            
+            .threshold-setting {
+                margin: 10px 0;
+                padding: 12px;
+            }
+            
+            .threshold-setting input {
+                width: 60px;
+                padding: 6px;
+                font-size: 0.9em;
+            }
+            
+            .info-text {
+                font-size: 0.75em;
+                margin-top: 10px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .container {
+                padding: 12px;
+            }
+            
+            h1 {
+                font-size: 1.3em;
+            }
+            
+            .meter-container {
+                width: 140px;
+                height: 140px;
+            }
+            
+            .volume-level {
+                font-size: 1.8em;
+            }
+            
+            .btn {
+                min-width: 120px;
+                font-size: 0.8em;
             }
         }
     </style>
